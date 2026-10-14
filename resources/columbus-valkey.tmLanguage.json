@@ -1,0 +1,8 @@
+{
+	"scopeName": "source.columbus-valkey",
+	"patterns": [
+		{
+			"include": "source.columbus-redis"
+		}
+	]
+}

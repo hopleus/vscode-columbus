@@ -1,0 +1,8 @@
+{
+	"scopeName": "source.columbus-dragonfly",
+	"patterns": [
+		{
+			"include": "source.columbus-redis"
+		}
+	]
+}

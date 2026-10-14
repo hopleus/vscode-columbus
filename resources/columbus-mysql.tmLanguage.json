@@ -1,0 +1,8 @@
+{
+	"scopeName": "source.columbus-mysql",
+	"patterns": [
+		{
+			"include": "source.sql"
+		}
+	]
+}

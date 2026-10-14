@@ -1,0 +1,43 @@
+# Changelog
+
+## 0.1.0
+
+- Database Explorer: routines, sequences, object types and foreign tables in schemas, checks and triggers in tables, extensions under Database Objects, roles and tablespaces under Server Objects; a click opens the DDL of an object in a preview tab.
+- Several databases of one PostgreSQL server in a data source (Choose Databases…), consoles bound to a database with a switch in the status bar.
+- SSH tunnels with password, key pair and agent authentication and host key fingerprints, also for Redis clusters and Sentinel; a dropped SSH connection opens again on the next action.
+- Redis Cluster and Sentinel, with TLS checked per node and writes following a Sentinel failover at once; `WATCH` and `MULTI` in the cluster console run on the node of the key.
+- Binary Redis key names, strings, hash fields and values, list items and set and sorted set members shown as hex and saved as bytes.
+- SSL with a CA file, a client certificate and key, and a Verify CA mode next to Verify CA and host; MySQL checks the host name in Verify CA and host.
+- Set SQL Expression… and Set DEFAULT in the grid; exports through server-side cursors.
+- SQLite: new database files from the form; dropping keys rebuilds the table.
+- Functions of the database in console completion.
+- SQLite data sources on the SQLite engine built into VS Code: a database file in the form, attached databases as schemas, the data editor and a SQLite console with completion.
+- Materialized views in a folder of their own, with Refresh Materialized View…; rename and drop use `MATERIALIZED VIEW`.
+- `<null>` stays readable in selected grid cells.
+- PostgreSQL data sources with the driver in a worker thread and the password in secret storage.
+- Data source form: fields and URL kept in sync, Test Connection, editing saved data sources.
+- Table and Redis key tabs come back after a window reload; change previews and DDL open read-only in the dialect of the data source; Choose Databases… and Choose Schemas… open at once and fill in when the catalog arrives.
+- MySQL and MariaDB data sources.
+- Drivers are not bundled into the extension: their files are downloaded on request from the GitHub release, like in DataGrip, and verified by SHA-256. The form shows the driver version or a Download / Update link, Database Explorer shows Download missing driver files, and Manage Drivers downloads, updates, deletes or installs them from a file.
+- Data editor toolbar: preview pending changes, manual transactions with commit and rollback, DDL, find, data extractors for copy and export.
+- Syntax highlighting and completion in `WHERE` and `ORDER BY`.
+- Query console per data source with statement execution, a results panel and catalog completion.
+- Console completion from the PostgreSQL and MySQL grammars: aliases, CTEs, subqueries, `JOIN … ON` from foreign keys, `INSERT` column lists and `UPDATE … SET`, with keywords filtered by clause.
+- Console tabs carry the icon of their server and are named `console [name]` like in DataGrip.
+- Redis, Valkey and Dragonfly data sources: databases, keys grouped by prefix with type and TTL, keys of every type in the grid with editing, a Redis console with command and key completion.
+- Connection tests can be stopped; the port field has no spinner.
+- PostgreSQL, MySQL and MariaDB icons for data sources in Database Explorer, with a green dot while connected.
+- Choose Schemas… hides schemas in Database Explorer; data sources show how many are shown (`1 of 3`).
+- Console results on MariaDB know the keys of their source tables through the paging wrapper.
+- Cancelling running statements in consoles and the data editor; SQLite sessions run in a process of their own so that they can be stopped.
+- A frame around the statement Execute runs, ✓ / ✗ and the time of executed statements; result toolbar with the query, Open in Editor Tab and the value panel toggle.
+- Console names colored by meaning, unknown tables and columns underlined with quick fixes, `*` expanded into the column list.
+- Console toolbar: Execute All, manual transactions with Commit and Rollback, the current schema in the status bar, the statement under the cursor highlighted.
+- `⌘C` / `⌘V` in the grid: paste tab-separated cells from the focused cell, or one value into every selected cell.
+- Disconnect keeps the tree and open table tabs, connects again only when the data source is used, and asks before rolling back uncommitted changes.
+- Context menus for grid cells and Database Explorer nodes.
+- Query results know the keys of their source tables.
+- Row count on demand when a table has more rows than one page.
+- Database Explorer tree with the demo data source.
+- Data editor: virtualized grid, paging, `WHERE` / `ORDER BY`, header sorting, column resizing, range selection and copy.
+- Pending changes: cell editing, adding and deleting rows, revert and submit.

@@ -1,0 +1,154 @@
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--vscode-editor-background);
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+}
+
+.page {
+	box-sizing: border-box;
+	max-width: 680px;
+	padding: 20px 28px 28px;
+}
+
+h1 {
+	margin: 0 0 8px;
+	font-size: 1.5em;
+	font-weight: 600;
+}
+
+.section {
+	padding: 8px 0;
+	border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.35)));
+}
+
+vscode-form-group {
+	--label-width: 116px;
+	--label-right-margin: 12px;
+
+	margin: 8px 0;
+}
+
+vscode-form-group > vscode-label {
+	text-align: left;
+}
+
+vscode-form-group > :not(vscode-label) {
+	width: calc(100% - 128px);
+}
+
+.pair {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.pair vscode-textfield:first-child {
+	flex: 1;
+	min-width: 0;
+}
+
+.pair .browse {
+	flex: none;
+	min-width: 0;
+}
+
+.pair .port {
+	flex: none;
+	width: 90px;
+}
+
+.pair-label {
+	flex: none;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 16px;
+}
+
+.buttons {
+	display: flex;
+	gap: 8px;
+}
+
+.status {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	min-height: 18px;
+	margin-top: 12px;
+	overflow-wrap: anywhere;
+}
+
+.status.ok {
+	color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.status.error {
+	color: var(--vscode-errorForeground, #f48771);
+	white-space: pre-wrap;
+}
+
+.status vscode-progress-ring {
+	width: 16px;
+	height: 16px;
+}
+
+vscode-button[hidden] {
+	display: none;
+}
+
+.status-stop {
+	margin-left: 10px;
+	color: var(--vscode-textLink-foreground);
+	text-decoration: none;
+}
+
+.status-stop:hover {
+	text-decoration: underline;
+}
+
+.driver-info {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 18px;
+	margin: -2px 0 6px 128px;
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+}
+
+.driver-info:empty {
+	display: none;
+}
+
+.driver-info.outdated,
+.driver-info.missing {
+	color: var(--vscode-editorWarning-foreground, var(--vscode-foreground));
+}
+
+.driver-info.failed {
+	color: var(--vscode-errorForeground);
+}
+
+.driver-info vscode-progress-ring {
+	width: 14px;
+	height: 14px;
+}
+
+.driver-link {
+	color: var(--vscode-textLink-foreground);
+	text-decoration: none;
+}
+
+.driver-link:hover {
+	text-decoration: underline;
+}

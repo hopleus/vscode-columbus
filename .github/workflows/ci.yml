@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: xvfb-run -a npm run test:integration
+        if: runner.os == 'Linux'
+      - run: npm run package
+
+  postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['13', '18']
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ matrix.version }}-alpine
+        env:
+          POSTGRES_PASSWORD: columbus
+          POSTGRES_DB: columbus
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      COLUMBUS_PG_URL: postgresql://postgres:columbus@localhost:5432/columbus
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit
+
+  mysql:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: mysql:8.0
+            health: mysqladmin ping -h 127.0.0.1 -pcolumbus
+          - image: mariadb:11.4
+            health: healthcheck.sh --connect --innodb_initialized
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: columbus
+          MARIADB_ROOT_PASSWORD: columbus
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "${{ matrix.health }}"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      COLUMBUS_MYSQL_URL: mysql://root:columbus@127.0.0.1:3306
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit
+
+  redis:
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['redis:7.4-alpine', 'valkey/valkey:8.1-alpine', 'docker.dragonflydb.io/dragonflydb/dragonfly:v1.37.0']
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: ${{ matrix.image }}
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      COLUMBUS_REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit
+
+  redis-topologies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Start Redis clusters and Sentinels
+        run: sh test/topologies.sh "$RUNNER_TEMP/topologies" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit
+
+  tls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Start PostgreSQL, MySQL and Redis with test certificates
+        run: sh test/tls.sh "$RUNNER_TEMP/tls" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit

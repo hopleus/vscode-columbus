@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag must match the version in package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          test "v${version}" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"; exit 1; }
+
+      - name: Tag must point to a commit on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main || { echo "Releases are published from main only"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: xvfb-run -a npm run test:integration
+
+      - name: Package the extension
+        run: |
+          mkdir -p dist
+          npm run package -- dist
+          for file in out/drivers/*.js; do cp "$file" "dist/columbus-driver-$(basename "$file")"; done
+          for file in out/assist/*.js; do cp "$file" "dist/columbus-assist-$(basename "$file")"; done
+          ls -la dist
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/*.vsix dist/columbus-driver-*.js dist/columbus-assist-*.js --title "${GITHUB_REF_NAME}" --generate-notes

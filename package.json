@@ -1,0 +1,1455 @@
+{
+	"name": "vscode-columbus",
+	"displayName": "Columbus",
+	"description": "A database client in the spirit of DataGrip: PostgreSQL, MySQL, MariaDB, SQLite, Redis, Valkey and Dragonfly with an editable data grid and SQL consoles that know your schema",
+	"version": "0.1.0",
+	"publisher": "hopleus",
+	"icon": "resources/icon.png",
+	"galleryBanner": {
+		"color": "#1E1E1E",
+		"theme": "dark"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/hopleus/vscode-columbus.git"
+	},
+	"homepage": "https://github.com/hopleus/vscode-columbus#readme",
+	"bugs": {
+		"url": "https://github.com/hopleus/vscode-columbus/issues"
+	},
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"database",
+		"sql",
+		"postgresql",
+		"mysql",
+		"mariadb",
+		"sqlite",
+		"redis",
+		"valkey",
+		"dragonfly",
+		"data grid",
+		"sql client"
+	],
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onFileSystem:columbus-redis",
+		"onWebviewPanel:columbus.dataEditor",
+		"onWebviewPanel:columbus.redisKey",
+		"onWebviewPanel:columbus.dataSource",
+		"onWebviewPanel:columbus.result",
+		"onLanguage:columbus-dragonfly",
+		"onLanguage:columbus-mariadb",
+		"onLanguage:columbus-mysql",
+		"onLanguage:columbus-postgres",
+		"onLanguage:columbus-redis",
+		"onLanguage:columbus-sqlite",
+		"onLanguage:columbus-valkey",
+		"onLanguage:sql"
+	],
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "Columbus connects to databases and runs SQL."
+		},
+		"virtualWorkspaces": true
+	},
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "columbus",
+					"title": "Columbus",
+					"icon": "resources/activity.svg"
+				}
+			],
+			"panel": [
+				{
+					"id": "columbus-results",
+					"title": "Columbus",
+					"icon": "resources/activity.svg"
+				}
+			]
+		},
+		"views": {
+			"columbus": [
+				{
+					"id": "columbus.explorer",
+					"name": "Database Explorer"
+				}
+			],
+			"columbus-results": [
+				{
+					"type": "webview",
+					"id": "columbus.results",
+					"name": "Results"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "columbus.explorer",
+				"contents": "No data sources yet.\n[Add Data Source](command:columbus.addDataSource)"
+			}
+		],
+		"commands": [
+			{
+				"command": "columbus.addDataSource",
+				"title": "Add Data Source",
+				"category": "Columbus",
+				"icon": "$(add)"
+			},
+			{
+				"command": "columbus.editDataSource",
+				"title": "Data Source Properties",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.removeDataSource",
+				"title": "Remove Data Source",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.refresh",
+				"title": "Refresh",
+				"category": "Columbus",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "columbus.openTable",
+				"title": "Open Table",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.openConsole",
+				"title": "Open Query Console",
+				"category": "Columbus",
+				"icon": "$(terminal)"
+			},
+			{
+				"command": "columbus.execute",
+				"title": "Execute Statement",
+				"category": "Columbus",
+				"icon": "$(play)"
+			},
+			{
+				"command": "columbus.cancel",
+				"title": "Cancel Running Statement",
+				"category": "Columbus",
+				"icon": "$(debug-stop)"
+			},
+			{
+				"command": "columbus.executeAll",
+				"title": "Execute All Statements",
+				"category": "Columbus",
+				"icon": "$(run-all)"
+			},
+			{
+				"command": "columbus.console.commit",
+				"title": "Commit",
+				"category": "Columbus",
+				"icon": "$(check)",
+				"enablement": "columbus.consoleTxOpen && !columbus.consoleRunning"
+			},
+			{
+				"command": "columbus.console.rollback",
+				"title": "Rollback",
+				"category": "Columbus",
+				"icon": "$(discard)",
+				"enablement": "columbus.consoleTxOpen && !columbus.consoleRunning"
+			},
+			{
+				"command": "columbus.console.toggleTransactionMode",
+				"title": "Toggle Transaction Mode (Auto / Manual)",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.console.chooseSchema",
+				"title": "Choose Current Schema…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.console.chooseDatabase",
+				"title": "Choose Console Database…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.clearResults",
+				"title": "Clear Results",
+				"category": "Columbus",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "columbus.chooseConsole",
+				"title": "Jump to Query Console…",
+				"category": "Columbus",
+				"icon": "$(terminal)"
+			},
+			{
+				"command": "columbus.grid.edit",
+				"title": "Edit",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.valueEditor",
+				"title": "Open in Value Editor",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.setNull",
+				"title": "Set NULL",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.setDefault",
+				"title": "Set DEFAULT",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.setExpression",
+				"title": "Set SQL Expression…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.revert",
+				"title": "Revert Selected",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.copy",
+				"title": "Copy",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.copyCsv",
+				"title": "CSV",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.copyTsv",
+				"title": "TSV",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.copyJson",
+				"title": "JSON",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.copySql",
+				"title": "SQL Inserts",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.copyMarkdown",
+				"title": "Markdown",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.paste",
+				"title": "Paste",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.addRow",
+				"title": "Add Row",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.cloneRow",
+				"title": "Clone Row",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.deleteRows",
+				"title": "Delete Rows",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterEquals",
+				"title": "Equal to Value",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterNotEquals",
+				"title": "Not Equal to Value",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterContains",
+				"title": "Containing Value",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterNull",
+				"title": "Is NULL",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterNotNull",
+				"title": "Is Not NULL",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterGreater",
+				"title": "Greater Than Value",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.filterLess",
+				"title": "Less Than Value",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.clearFilter",
+				"title": "Clear Filter",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.goTo",
+				"title": "Go to Referenced Row",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.recordView",
+				"title": "Show Record View",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.aggregate",
+				"title": "Show Aggregate View",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.grid.exportClipboard",
+				"title": "Export to Clipboard",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.refresh",
+				"title": "Refresh",
+				"category": "Columbus",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "columbus.tree.chooseSchemas",
+				"title": "Choose Schemas…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.disconnect",
+				"title": "Disconnect",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.editData",
+				"title": "Edit Data",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.newConsole",
+				"title": "Query Console",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.newTable",
+				"title": "Table",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.newView",
+				"title": "View",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.newColumn",
+				"title": "Column",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.newIndex",
+				"title": "Index",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.ddl",
+				"title": "Show DDL",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.select",
+				"title": "SELECT Statement",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.insert",
+				"title": "INSERT Statement",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.update",
+				"title": "UPDATE Statement",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.delete",
+				"title": "DELETE Statement",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.schemaDdl",
+				"title": "Generate DDL",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.copyName",
+				"title": "Copy Name",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.copyQualifiedName",
+				"title": "Copy Qualified Name",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.export",
+				"title": "Export Data…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.rename",
+				"title": "Rename…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.truncate",
+				"title": "Truncate…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.objectDdl",
+				"title": "Generate DDL",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.chooseDatabases",
+				"title": "Choose Databases…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.refreshMaterializedView",
+				"title": "Refresh Materialized View…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.tree.drop",
+				"title": "Drop…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.openKey",
+				"title": "Open Key",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.openConsole",
+				"title": "Open Console",
+				"category": "Columbus",
+				"icon": "$(terminal)"
+			},
+			{
+				"command": "columbus.redis.filterKeys",
+				"title": "Filter Keys…",
+				"category": "Columbus",
+				"icon": "$(filter)"
+			},
+			{
+				"command": "columbus.redis.newKey",
+				"title": "New Key…",
+				"category": "Columbus",
+				"icon": "$(add)"
+			},
+			{
+				"command": "columbus.redis.copyKey",
+				"title": "Copy Key Name",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.renameKey",
+				"title": "Rename Key…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.expireKey",
+				"title": "Set Time to Live…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.deleteKey",
+				"title": "Delete",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.chooseDatabase",
+				"title": "Choose Console Database…",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.redis.openAsText",
+				"title": "Open as Text",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.downloadDriver",
+				"title": "Download Driver Files…",
+				"category": "Columbus",
+				"icon": "$(cloud-download)"
+			},
+			{
+				"command": "columbus.manageDrivers",
+				"title": "Manage Drivers…",
+				"category": "Columbus",
+				"icon": "$(extensions)"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "columbus.addDataSource",
+					"when": "view == columbus.explorer",
+					"group": "navigation@1"
+				},
+				{
+					"command": "columbus.chooseConsole",
+					"when": "view == columbus.explorer",
+					"group": "navigation@2"
+				},
+				{
+					"command": "columbus.refresh",
+					"when": "view == columbus.explorer",
+					"group": "navigation@3"
+				},
+				{
+					"command": "columbus.clearResults",
+					"when": "view == columbus.results",
+					"group": "navigation"
+				},
+				{
+					"command": "columbus.manageDrivers",
+					"when": "view == columbus.explorer",
+					"group": "more@1"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "columbus.editData",
+					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView)$/",
+					"group": "0_data@1"
+				},
+				{
+					"submenu": "columbus.tree.new",
+					"when": "view == columbus.explorer && viewItem =~ /^(source|schema|table)/",
+					"group": "0_data@2"
+				},
+				{
+					"command": "columbus.openConsole",
+					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource|database$)/",
+					"group": "0_data@3"
+				},
+				{
+					"command": "columbus.tree.refresh",
+					"when": "view == columbus.explorer && viewItem =~ /^(source|database|schema|table|view|materializedView|redisSource|redisDb|redisFolder)/",
+					"group": "1_refresh@1"
+				},
+				{
+					"command": "columbus.tree.disconnect",
+					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource).*\\.connected(\\.|$)/",
+					"group": "1_refresh@2"
+				},
+				{
+					"command": "columbus.tree.copyName",
+					"when": "view == columbus.explorer && viewItem =~ /^(database|schema|table|view|materializedView|column|primaryKey|key|foreignKey|index|routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
+					"group": "2_copy@1"
+				},
+				{
+					"command": "columbus.tree.copyQualifiedName",
+					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView|column|routine|sequence|objectType)$/",
+					"group": "2_copy@2"
+				},
+				{
+					"submenu": "columbus.tree.scripts",
+					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView)$/",
+					"group": "3_scripts@1"
+				},
+				{
+					"command": "columbus.tree.schemaDdl",
+					"when": "view == columbus.explorer && viewItem == schema",
+					"group": "3_scripts@2"
+				},
+				{
+					"command": "columbus.tree.objectDdl",
+					"when": "view == columbus.explorer && viewItem =~ /^(routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
+					"group": "3_scripts@1"
+				},
+				{
+					"command": "columbus.tree.export",
+					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView)$/",
+					"group": "3_scripts@3"
+				},
+				{
+					"command": "columbus.tree.chooseDatabases",
+					"when": "view == columbus.explorer && viewItem =~ /^source.*\\.databases/",
+					"group": "4_properties@0"
+				},
+				{
+					"command": "columbus.tree.chooseSchemas",
+					"when": "view == columbus.explorer && viewItem =~ /^source/",
+					"group": "4_properties@0"
+				},
+				{
+					"command": "columbus.editDataSource",
+					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource)\\.removable/",
+					"group": "4_properties@1"
+				},
+				{
+					"command": "columbus.tree.rename",
+					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView|column)$/",
+					"group": "5_modify@1"
+				},
+				{
+					"command": "columbus.tree.truncate",
+					"when": "view == columbus.explorer && viewItem == table",
+					"group": "5_modify@2"
+				},
+				{
+					"command": "columbus.tree.refreshMaterializedView",
+					"when": "view == columbus.explorer && viewItem == materializedView",
+					"group": "5_modify@3"
+				},
+				{
+					"command": "columbus.tree.drop",
+					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView|column|primaryKey|key|foreignKey|index|routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
+					"group": "9_drop@1"
+				},
+				{
+					"command": "columbus.removeDataSource",
+					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource)\\.removable/",
+					"group": "9_drop@2"
+				},
+				{
+					"command": "columbus.redis.openConsole",
+					"when": "view == columbus.explorer && viewItem == redisDb",
+					"group": "0_data@1"
+				},
+				{
+					"command": "columbus.redis.newKey",
+					"when": "view == columbus.explorer && viewItem =~ /^(redisDb|redisFolder)$/",
+					"group": "0_data@2"
+				},
+				{
+					"command": "columbus.redis.filterKeys",
+					"when": "view == columbus.explorer && viewItem == redisDb",
+					"group": "0_data@3"
+				},
+				{
+					"command": "columbus.redis.openKey",
+					"when": "view == columbus.explorer && viewItem == redisKey",
+					"group": "0_data@1"
+				},
+				{
+					"command": "columbus.redis.copyKey",
+					"when": "view == columbus.explorer && viewItem == redisKey",
+					"group": "2_copy@1"
+				},
+				{
+					"command": "columbus.redis.renameKey",
+					"when": "view == columbus.explorer && viewItem == redisKey",
+					"group": "3_modify@1"
+				},
+				{
+					"command": "columbus.redis.expireKey",
+					"when": "view == columbus.explorer && viewItem == redisKey",
+					"group": "3_modify@2"
+				},
+				{
+					"command": "columbus.redis.deleteKey",
+					"when": "view == columbus.explorer && viewItem =~ /^(redisKey|redisFolder)$/",
+					"group": "9_drop@1"
+				},
+				{
+					"command": "columbus.redis.openAsText",
+					"when": "view == columbus.explorer && viewItem == redisKey",
+					"group": "0_data@2"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "columbus.editDataSource",
+					"when": "false"
+				},
+				{
+					"command": "columbus.removeDataSource",
+					"when": "false"
+				},
+				{
+					"command": "columbus.openTable",
+					"when": "false"
+				},
+				{
+					"command": "columbus.execute",
+					"when": "columbus.consoleActive || columbus.redisConsoleActive"
+				},
+				{
+					"command": "columbus.cancel",
+					"when": "columbus.consoleRunning || columbus.redisConsoleRunning"
+				},
+				{
+					"command": "columbus.executeAll",
+					"when": "columbus.consoleActive"
+				},
+				{
+					"command": "columbus.console.commit",
+					"when": "columbus.consoleActive"
+				},
+				{
+					"command": "columbus.console.rollback",
+					"when": "columbus.consoleActive"
+				},
+				{
+					"command": "columbus.console.toggleTransactionMode",
+					"when": "columbus.consoleActive"
+				},
+				{
+					"command": "columbus.console.chooseSchema",
+					"when": "columbus.consoleActive"
+				},
+				{
+					"command": "columbus.console.chooseDatabase",
+					"when": "columbus.consoleActive"
+				},
+				{
+					"command": "columbus.clearResults",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.edit",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.valueEditor",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.setNull",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.setDefault",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.setExpression",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.revert",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.copy",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.copyCsv",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.copyTsv",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.copyJson",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.copySql",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.copyMarkdown",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.paste",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.addRow",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.cloneRow",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.deleteRows",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterEquals",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterNotEquals",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterContains",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterNull",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterNotNull",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterGreater",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.filterLess",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.clearFilter",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.goTo",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.recordView",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.aggregate",
+					"when": "false"
+				},
+				{
+					"command": "columbus.grid.exportClipboard",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.refresh",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.chooseSchemas",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.disconnect",
+					"when": "false"
+				},
+				{
+					"command": "columbus.editData",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.newConsole",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.newTable",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.newView",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.newColumn",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.newIndex",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.ddl",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.select",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.insert",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.update",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.delete",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.schemaDdl",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.copyName",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.copyQualifiedName",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.export",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.rename",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.truncate",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.objectDdl",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.chooseDatabases",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.refreshMaterializedView",
+					"when": "false"
+				},
+				{
+					"command": "columbus.tree.drop",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.openKey",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.openConsole",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.filterKeys",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.newKey",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.copyKey",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.renameKey",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.expireKey",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.deleteKey",
+					"when": "false"
+				},
+				{
+					"command": "columbus.redis.chooseDatabase",
+					"when": "columbus.redisConsoleActive"
+				},
+				{
+					"command": "columbus.redis.openAsText",
+					"when": "false"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "columbus.execute",
+					"when": "columbus.consoleActive && !columbus.consoleRunning || columbus.redisConsoleActive && !columbus.redisConsoleRunning",
+					"group": "navigation@1"
+				},
+				{
+					"command": "columbus.cancel",
+					"when": "columbus.consoleActive && columbus.consoleRunning || columbus.redisConsoleActive && columbus.redisConsoleRunning",
+					"group": "navigation@1"
+				},
+				{
+					"command": "columbus.executeAll",
+					"when": "columbus.consoleActive && !columbus.consoleRunning",
+					"group": "navigation@2"
+				},
+				{
+					"command": "columbus.console.commit",
+					"when": "columbus.consoleActive && (columbus.consoleManual || columbus.consoleTxOpen)",
+					"group": "navigation@3"
+				},
+				{
+					"command": "columbus.console.rollback",
+					"when": "columbus.consoleActive && (columbus.consoleManual || columbus.consoleTxOpen)",
+					"group": "navigation@4"
+				}
+			],
+			"webview/context": [
+				{
+					"command": "columbus.grid.edit",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "1_edit@1"
+				},
+				{
+					"command": "columbus.grid.valueEditor",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "1_edit@2"
+				},
+				{
+					"command": "columbus.grid.setNull",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "1_edit@3"
+				},
+				{
+					"command": "columbus.grid.setDefault",
+					"when": "webviewSection == 'columbus.cell' && defaults",
+					"group": "1_edit@4"
+				},
+				{
+					"command": "columbus.grid.setExpression",
+					"when": "webviewSection == 'columbus.cell' && expressions",
+					"group": "1_edit@5"
+				},
+				{
+					"command": "columbus.grid.revert",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "1_edit@6"
+				},
+				{
+					"command": "columbus.grid.copy",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "2_copy@1"
+				},
+				{
+					"submenu": "columbus.grid.copyAs",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "2_copy@2"
+				},
+				{
+					"command": "columbus.grid.paste",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "2_copy@3"
+				},
+				{
+					"command": "columbus.grid.addRow",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "3_rows@1"
+				},
+				{
+					"command": "columbus.grid.cloneRow",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "3_rows@2"
+				},
+				{
+					"command": "columbus.grid.deleteRows",
+					"when": "webviewSection == 'columbus.cell' && editable",
+					"group": "3_rows@3"
+				},
+				{
+					"submenu": "columbus.grid.filterBy",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "4_filter@1"
+				},
+				{
+					"command": "columbus.grid.clearFilter",
+					"when": "webviewSection == 'columbus.cell' && filtered",
+					"group": "4_filter@2"
+				},
+				{
+					"command": "columbus.grid.goTo",
+					"when": "webviewSection == 'columbus.cell' && reference",
+					"group": "5_navigate@1"
+				},
+				{
+					"command": "columbus.grid.recordView",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "6_view@1"
+				},
+				{
+					"command": "columbus.grid.aggregate",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "6_view@2"
+				},
+				{
+					"command": "columbus.grid.exportClipboard",
+					"when": "webviewSection == 'columbus.cell'",
+					"group": "6_view@3"
+				}
+			],
+			"columbus.grid.copyAs": [
+				{
+					"command": "columbus.grid.copyCsv",
+					"group": "1@1"
+				},
+				{
+					"command": "columbus.grid.copyTsv",
+					"group": "1@2"
+				},
+				{
+					"command": "columbus.grid.copyJson",
+					"group": "1@3"
+				},
+				{
+					"command": "columbus.grid.copySql",
+					"group": "1@4"
+				},
+				{
+					"command": "columbus.grid.copyMarkdown",
+					"group": "1@5"
+				}
+			],
+			"columbus.grid.filterBy": [
+				{
+					"command": "columbus.grid.filterEquals",
+					"group": "1@1"
+				},
+				{
+					"command": "columbus.grid.filterNotEquals",
+					"group": "1@2"
+				},
+				{
+					"command": "columbus.grid.filterContains",
+					"group": "1@3"
+				},
+				{
+					"command": "columbus.grid.filterNull",
+					"group": "2@4"
+				},
+				{
+					"command": "columbus.grid.filterNotNull",
+					"group": "2@5"
+				},
+				{
+					"command": "columbus.grid.filterGreater",
+					"group": "3@6"
+				},
+				{
+					"command": "columbus.grid.filterLess",
+					"group": "3@7"
+				}
+			],
+			"columbus.tree.new": [
+				{
+					"command": "columbus.tree.newConsole",
+					"group": "1@1"
+				},
+				{
+					"command": "columbus.tree.newTable",
+					"when": "viewItem == schema",
+					"group": "2@1"
+				},
+				{
+					"command": "columbus.tree.newView",
+					"when": "viewItem == schema",
+					"group": "2@2"
+				},
+				{
+					"command": "columbus.tree.newColumn",
+					"when": "viewItem == table",
+					"group": "2@3"
+				},
+				{
+					"command": "columbus.tree.newIndex",
+					"when": "viewItem == table",
+					"group": "2@4"
+				}
+			],
+			"columbus.tree.scripts": [
+				{
+					"command": "columbus.tree.ddl",
+					"group": "1@1"
+				},
+				{
+					"command": "columbus.tree.select",
+					"group": "2@1"
+				},
+				{
+					"command": "columbus.tree.insert",
+					"when": "viewItem == table",
+					"group": "2@2"
+				},
+				{
+					"command": "columbus.tree.update",
+					"when": "viewItem == table",
+					"group": "2@3"
+				},
+				{
+					"command": "columbus.tree.delete",
+					"when": "viewItem == table",
+					"group": "2@4"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "columbus.execute",
+				"key": "ctrl+enter",
+				"when": "editorTextFocus && (columbus.consoleActive || columbus.redisConsoleActive)"
+			},
+			{
+				"command": "columbus.executeAll",
+				"key": "ctrl+shift+enter",
+				"when": "editorTextFocus && columbus.consoleActive && !suggestWidgetVisible"
+			},
+			{
+				"command": "columbus.cancel",
+				"key": "ctrl+f2",
+				"mac": "cmd+f2",
+				"when": "columbus.consoleRunning || columbus.redisConsoleRunning"
+			},
+			{
+				"command": "columbus.editData",
+				"key": "ctrl+down",
+				"mac": "cmd+down",
+				"when": "focusedView == columbus.explorer"
+			},
+			{
+				"command": "columbus.tree.rename",
+				"key": "f2",
+				"when": "focusedView == columbus.explorer"
+			},
+			{
+				"command": "columbus.tree.drop",
+				"key": "ctrl+backspace",
+				"mac": "cmd+backspace",
+				"when": "focusedView == columbus.explorer"
+			},
+			{
+				"command": "columbus.openConsole",
+				"key": "ctrl+shift+l",
+				"mac": "shift+cmd+l",
+				"when": "focusedView == columbus.explorer"
+			}
+		],
+		"submenus": [
+			{
+				"id": "columbus.grid.copyAs",
+				"label": "Copy As"
+			},
+			{
+				"id": "columbus.grid.filterBy",
+				"label": "Filter by"
+			},
+			{
+				"id": "columbus.tree.new",
+				"label": "New"
+			},
+			{
+				"id": "columbus.tree.scripts",
+				"label": "SQL Scripts"
+			}
+		],
+		"languages": [
+			{
+				"id": "columbus-postgres",
+				"aliases": [
+					"PostgreSQL (Columbus)"
+				],
+				"configuration": "./resources/columbus-sql.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-postgres.svg",
+					"dark": "./resources/icons/dark/source-postgres.svg"
+				}
+			},
+			{
+				"id": "columbus-mysql",
+				"aliases": [
+					"MySQL (Columbus)"
+				],
+				"configuration": "./resources/columbus-sql.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-mysql.svg",
+					"dark": "./resources/icons/dark/source-mysql.svg"
+				}
+			},
+			{
+				"id": "columbus-mariadb",
+				"aliases": [
+					"MariaDB (Columbus)"
+				],
+				"configuration": "./resources/columbus-sql.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-mariadb.svg",
+					"dark": "./resources/icons/dark/source-mariadb.svg"
+				}
+			},
+			{
+				"id": "columbus-sqlite",
+				"aliases": [
+					"SQLite (Columbus)"
+				],
+				"configuration": "./resources/columbus-sql.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-sqlite.svg",
+					"dark": "./resources/icons/dark/source-sqlite.svg"
+				}
+			},
+			{
+				"id": "columbus-redis",
+				"aliases": [
+					"Redis (Columbus)"
+				],
+				"configuration": "./resources/columbus-redis.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-redis.svg",
+					"dark": "./resources/icons/dark/source-redis.svg"
+				}
+			},
+			{
+				"id": "columbus-valkey",
+				"aliases": [
+					"Valkey (Columbus)"
+				],
+				"configuration": "./resources/columbus-redis.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-valkey.svg",
+					"dark": "./resources/icons/dark/source-valkey.svg"
+				}
+			},
+			{
+				"id": "columbus-dragonfly",
+				"aliases": [
+					"Dragonfly (Columbus)"
+				],
+				"configuration": "./resources/columbus-redis.language.json",
+				"icon": {
+					"light": "./resources/icons/light/source-dragonfly.svg",
+					"dark": "./resources/icons/dark/source-dragonfly.svg"
+				}
+			}
+		],
+		"grammars": [
+			{
+				"language": "columbus-postgres",
+				"scopeName": "source.columbus-postgres",
+				"path": "./resources/columbus-postgres.tmLanguage.json"
+			},
+			{
+				"language": "columbus-mysql",
+				"scopeName": "source.columbus-mysql",
+				"path": "./resources/columbus-mysql.tmLanguage.json"
+			},
+			{
+				"language": "columbus-mariadb",
+				"scopeName": "source.columbus-mariadb",
+				"path": "./resources/columbus-mariadb.tmLanguage.json"
+			},
+			{
+				"language": "columbus-sqlite",
+				"scopeName": "source.columbus-sqlite",
+				"path": "./resources/columbus-sqlite.tmLanguage.json"
+			},
+			{
+				"language": "columbus-redis",
+				"scopeName": "source.columbus-redis",
+				"path": "./resources/columbus-redis.tmLanguage.json"
+			},
+			{
+				"language": "columbus-valkey",
+				"scopeName": "source.columbus-valkey",
+				"path": "./resources/columbus-valkey.tmLanguage.json"
+			},
+			{
+				"language": "columbus-dragonfly",
+				"scopeName": "source.columbus-dragonfly",
+				"path": "./resources/columbus-dragonfly.tmLanguage.json"
+			}
+		],
+		"configurationDefaults": {
+			"[columbus-postgres][columbus-mysql][columbus-mariadb][columbus-sqlite]": {
+				"editor.wordBasedSuggestions": "off",
+				"editor.suggest.showWords": false,
+				"editor.quickSuggestions": {
+					"other": "on",
+					"comments": "off",
+					"strings": "off"
+				},
+				"editor.suggestOnTriggerCharacters": true,
+				"editor.semanticHighlighting.enabled": true
+			},
+			"[columbus-redis][columbus-valkey][columbus-dragonfly]": {
+				"editor.wordBasedSuggestions": "off",
+				"editor.suggest.showWords": false,
+				"editor.quickSuggestions": {
+					"other": "on",
+					"comments": "off",
+					"strings": "off"
+				}
+			}
+		},
+		"colors": [
+			{
+				"id": "columbus.currentStatementBorder",
+				"description": "Border around the statement that Execute runs in Columbus query consoles.",
+				"defaults": {
+					"dark": "#ffffff3d",
+					"light": "#00000033",
+					"highContrast": "contrastBorder",
+					"highContrastLight": "contrastBorder"
+				}
+			}
+		]
+	},
+	"scripts": {
+		"typecheck": "tsc -p tsconfig.json && tsc -p src/webview/tsconfig.json",
+		"build": "node esbuild.mjs",
+		"watch": "node esbuild.mjs --watch",
+		"package": "node esbuild.mjs && node scripts/package.mjs",
+		"test": "npm run test:unit && npm run test:integration",
+		"test:unit": "node test/unit.mjs",
+		"test:integration": "node test/run.mjs",
+		"lint": "eslint src test",
+		"check": "npm run typecheck && npm run lint && npm run test:unit",
+		"vscode:prepublish": "node esbuild.mjs"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.5",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^22.0.0",
+		"@types/pg": "^8.23.1",
+		"@types/ssh2": "^1.15.6",
+		"@types/vscode": "^1.90.0",
+		"@vscode-elements/elements": "^2.5.1",
+		"@vscode/test-electron": "^3.1.0",
+		"@vscode/vsce": "^3.0.0",
+		"dt-sql-parser": "^4.5.1",
+		"esbuild": "^0.25.0",
+		"eslint": "^9.39.5",
+		"iovalkey": "^0.4.0",
+		"mocha": "^12.0.3",
+		"mysql2": "^3.24.6",
+		"pg": "^8.23.1",
+		"ssh2": "^1.17.0",
+		"typescript": "~5.9.3",
+		"typescript-eslint": "^8.71.1"
+	}
+}

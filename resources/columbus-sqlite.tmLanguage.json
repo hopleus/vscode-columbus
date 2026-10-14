@@ -1,0 +1,8 @@
+{
+	"scopeName": "source.columbus-sqlite",
+	"patterns": [
+		{
+			"include": "source.sql"
+		}
+	]
+}

@@ -1,0 +1,11 @@
+{
+	"scopeName": "source.columbus-redis",
+	"patterns": [
+		{ "match": "^\\s*(#|//).*$", "name": "comment.line.columbus-redis" },
+		{ "match": "^\\s*([A-Za-z][\\w.-]*)(?:\\s+(GET|SET|RESETSTAT|REWRITE|INFO|LIST|KILL|DOCS|COUNT|STATS|USAGE|DOCTOR|LOAD|FLUSH|EXISTS|STREAM|GROUPS|CONSUMERS|CREATE|DESTROY|SETID|DELCONSUMER|CREATECONSUMER|ID|SETNAME|GETNAME|NO-EVICT|TRACKING|UNBLOCK|PAUSE|UNPAUSE|REPLY|LATEST|HISTORY|RESET|ENCODING|FREQ|IDLETIME|REFCOUNT|HELP))?\\b", "captures": { "1": { "name": "keyword.control.columbus-redis" }, "2": { "name": "keyword.control.columbus-redis" } } },
+		{ "begin": "\"", "end": "\"", "name": "string.quoted.double.columbus-redis", "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.columbus-redis" }] },
+		{ "begin": "'", "end": "'", "name": "string.quoted.single.columbus-redis" },
+		{ "match": "(?<![\\w:.-])-?\\d+(?:\\.\\d+)?(?![\\w:.-])", "name": "constant.numeric.columbus-redis" },
+		{ "match": "(?i)(?<![\\w:-])(EX|PX|EXAT|PXAT|NX|XX|GT|LT|KEEPTTL|GET|WITHSCORES|LIMIT|MATCH|COUNT|TYPE|BYSCORE|BYLEX|REV|CH|INCR|MAXLEN|MINID|NOMKSTREAM|REPLACE|ABSTTL|IDLETIME|FREQ|ASYNC|SYNC)(?![\\w:-])", "name": "keyword.other.columbus-redis" }
+	]
+}

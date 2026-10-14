@@ -1,0 +1,8 @@
+{
+	"scopeName": "source.columbus-mariadb",
+	"patterns": [
+		{
+			"include": "source.sql"
+		}
+	]
+}
