@@ -1,4 +1,7 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 async function settle<T>(read: () => T, done: (value: T) => boolean): Promise<T> {
@@ -48,12 +51,20 @@ suite('data editor', () => {
 		assert.deepEqual(labels.filter(l => l === 'users [Demo]'), ['users [Demo]']);
 	});
 
-	test('Add Data Source opens the data source form', async () => {
+	test('Add Data Source opens the data source form, global without a folder', async () => {
 		await vscode.commands.executeCommand('columbus.addDataSource');
-		assert.equal(await settle(activeLabel, label => label === 'New Data Source'), 'New Data Source');
+		assert.equal(await settle(activeLabel, label => label === 'New Global Data Source'), 'New Global Data Source');
 		await vscode.commands.executeCommand('columbus.addDataSource');
 		const labels = vscode.window.tabGroups.all.flatMap(g => g.tabs.map(t => t.label));
-		assert.deepEqual(labels.filter(l => l === 'New Data Source'), ['New Data Source']);
+		assert.deepEqual(labels.filter(l => l.startsWith('New ')), ['New Global Data Source']);
+	});
+
+	test('without a folder every data source is global', async () => {
+		const roots = (global: boolean): Thenable<string[]> => vscode.commands.executeCommand<string[]>('columbus.test.roots', global);
+		assert.deepEqual(await roots(false), []);
+		assert.ok((await roots(true)).includes('demo'));
+		await vscode.commands.executeCommand('columbus.test.move', 'demo', false);
+		assert.deepEqual(await roots(false), []);
 	});
 
 	test('Open Query Console opens the console of a data source', async () => {
@@ -376,5 +387,97 @@ suite('data editor', () => {
 		const ddl = await settle(() => vscode.window.visibleTextEditors.find(e => e.document.uri.scheme === 'columbus-ddl'), e => !!e);
 		assert.equal(ddl?.document.getText(), 'CREATE TABLE users ();\n');
 		assert.equal(ddl?.document.languageId, 'columbus-postgres');
+	});
+});
+
+suite('project storage', () => {
+	const exclude = (): Record<string, boolean> | undefined => vscode.workspace.getConfiguration('files').inspect<Record<string, boolean>>('exclude')?.globalValue;
+	const hide = (project: boolean): Thenable<void> => vscode.commands.executeCommand('columbus.test.hideFolder', project);
+
+	test('without a folder data stays in VS Code storage', async () => {
+		const result = await vscode.commands.executeCommand<{ project: boolean }>('columbus.test.storage');
+		assert.equal(result.project, false);
+	});
+
+	test('a folder keeps its state in a self-ignoring .columbus folder', async () => {
+		const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'columbus-it-'));
+		const result = await vscode.commands.executeCommand<{ project: boolean; root: string }>('columbus.test.storage', folder);
+		assert.equal(result.project, true);
+		assert.equal(result.root, path.join(folder, '.columbus'));
+		assert.equal(fs.readFileSync(path.join(result.root, '.gitignore'), 'utf8'), '*\n');
+		assert.deepEqual(JSON.parse(fs.readFileSync(path.join(result.root, 'state.json'), 'utf8')), { probe: 1 });
+		fs.rmSync(folder, { recursive: true, force: true });
+	});
+
+	test('the setting switches back to VS Code storage', async () => {
+		const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'columbus-it-'));
+		const config = vscode.workspace.getConfiguration('columbus');
+		await config.update('storage', 'internal', vscode.ConfigurationTarget.Global);
+		try {
+			const result = await vscode.commands.executeCommand<{ project: boolean }>('columbus.test.storage', folder);
+			assert.equal(result.project, false);
+			assert.equal(fs.existsSync(path.join(folder, '.columbus')), false);
+		} finally {
+			await config.update('storage', undefined, vscode.ConfigurationTarget.Global);
+			fs.rmSync(folder, { recursive: true, force: true });
+		}
+	});
+
+	test('a project window hides the folder without touching other exclusions', async () => {
+		const files = vscode.workspace.getConfiguration('files');
+		const before = exclude();
+		await files.update('exclude', { '**/dist': true }, vscode.ConfigurationTarget.Global);
+		try {
+			await hide(true);
+			assert.deepEqual(exclude(), { '**/dist': true, '**/.columbus': true });
+			await hide(true);
+			assert.deepEqual(exclude(), { '**/dist': true, '**/.columbus': true });
+			assert.equal(files.get<Record<string, boolean>>('exclude')?.['**/.git'], true);
+		} finally {
+			await files.update('exclude', before, vscode.ConfigurationTarget.Global);
+		}
+	});
+
+	test('a window without a project does not show the folder again', async () => {
+		const files = vscode.workspace.getConfiguration('files');
+		const before = exclude();
+		await files.update('exclude', { '**/.columbus': true }, vscode.ConfigurationTarget.Global);
+		try {
+			await hide(false);
+			assert.deepEqual(exclude(), { '**/.columbus': true });
+		} finally {
+			await files.update('exclude', before, vscode.ConfigurationTarget.Global);
+		}
+	});
+
+	test('with the setting off the folder is shown in every window', async () => {
+		const files = vscode.workspace.getConfiguration('files');
+		const config = vscode.workspace.getConfiguration('columbus');
+		const before = exclude();
+		await config.update('hideProjectFolder', false, vscode.ConfigurationTarget.Global);
+		try {
+			for (const project of [true, false]) {
+				await files.update('exclude', { '**/dist': true, '**/.columbus': true }, vscode.ConfigurationTarget.Global);
+				await hide(project);
+				assert.deepEqual(exclude(), { '**/dist': true }, `project ${project}`);
+			}
+		} finally {
+			await config.update('hideProjectFolder', undefined, vscode.ConfigurationTarget.Global);
+			await files.update('exclude', before, vscode.ConfigurationTarget.Global);
+		}
+	});
+
+	test('changing the setting updates files.exclude without a reload', async () => {
+		const files = vscode.workspace.getConfiguration('files');
+		const config = vscode.workspace.getConfiguration('columbus');
+		const before = exclude();
+		await files.update('exclude', { '**/dist': true, '**/.columbus': true }, vscode.ConfigurationTarget.Global);
+		try {
+			await config.update('hideProjectFolder', false, vscode.ConfigurationTarget.Global);
+			assert.deepEqual(await settle(exclude, value => !value || !('**/.columbus' in value)), { '**/dist': true });
+		} finally {
+			await config.update('hideProjectFolder', undefined, vscode.ConfigurationTarget.Global);
+			await files.update('exclude', before, vscode.ConfigurationTarget.Global);
+		}
 	});
 });

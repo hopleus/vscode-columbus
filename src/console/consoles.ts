@@ -19,6 +19,8 @@ import { ALIAS, countSql, pageSql, pageable, selectItems } from './paging';
 import { ConsoleLanguage, SQL_SELECTOR, sqlLanguage } from './language';
 import { columnListSuggestions, smartSuggestions, wordStart } from './smart';
 import type { QueryTab, ResultsView } from './results';
+import { isSourceId } from '../store';
+import type { Place, Places } from '../storage';
 
 const PAGE_SIZE = 500;
 const SCHEMA_CHANGE = /^\s*(create|alter|drop|rename|truncate|comment)\b/i;
@@ -79,6 +81,42 @@ export function resultTitle(sql: string): string {
 const CONSOLE_FILE = /^(console(?:_\d+)?) \[.*\](?:\.sql)?$/;
 const CONSOLE_DATABASES = 'columbus.consoleDatabases';
 
+async function closeTabs(folder: vscode.Uri): Promise<boolean> {
+	const prefix = `${folder.toString()}/`;
+	const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs)
+		.filter(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.toString().startsWith(prefix));
+	return !tabs.length || await vscode.window.tabGroups.close(tabs);
+}
+
+async function takeDatabases(state: vscode.Memento, folder: vscode.Uri): Promise<[string, string][]> {
+	const prefix = `${folder.toString()}/`;
+	const databases = Object.entries(state.get<Record<string, string>>(CONSOLE_DATABASES, {}));
+	const taken = databases.filter(([key]) => key.startsWith(prefix));
+	if (taken.length) {
+		await state.update(CONSOLE_DATABASES, Object.fromEntries(databases.filter(([key]) => !key.startsWith(prefix))));
+	}
+	return taken;
+}
+
+async function moveFolder(from: vscode.Uri, to: vscode.Uri): Promise<void> {
+	let entries: [string, vscode.FileType][];
+	try {
+		entries = await vscode.workspace.fs.readDirectory(from);
+	} catch {
+		return;
+	}
+	await vscode.workspace.fs.createDirectory(to);
+	for (const [name] of entries) {
+		const target = vscode.Uri.joinPath(to, name);
+		if (await vscode.workspace.fs.stat(target).then(() => true, () => false)) {
+			continue;
+		}
+		await vscode.workspace.fs.copy(vscode.Uri.joinPath(from, name), target);
+		await vscode.workspace.fs.delete(vscode.Uri.joinPath(from, name), { recursive: true });
+	}
+	await vscode.workspace.fs.delete(from).then(undefined, () => undefined);
+}
+
 interface ConsoleFile {
 	base: string;
 	uri: vscode.Uri;
@@ -114,11 +152,10 @@ export class Consoles implements vscode.Disposable {
 
 	constructor(
 		extensionUri: vscode.Uri,
-		private readonly storage: vscode.Uri,
+		private readonly places: Places,
 		private readonly sources: Sources,
 		private readonly results: ResultsView,
 		private readonly assist: AssistClient,
-		private readonly state: vscode.Memento,
 		private readonly filter: SchemaFilter
 	) {
 		this.status.tooltip = 'Columbus data source of this console';
@@ -212,8 +249,12 @@ export class Consoles implements vscode.Disposable {
 		}
 	}
 
-	private get root(): vscode.Uri {
-		return vscode.Uri.joinPath(this.storage, 'consoles');
+	private placeOf(sourceId: string): Place {
+		return this.places.of(this.sources.get(sourceId)?.global ?? true);
+	}
+
+	private rootOf(sourceId: string): vscode.Uri {
+		return vscode.Uri.joinPath(this.placeOf(sourceId).uri, 'consoles');
 	}
 
 	async open(source: DataSource, database?: string): Promise<void> {
@@ -266,7 +307,7 @@ export class Consoles implements vscode.Disposable {
 	}
 
 	private async files(source: DataSource): Promise<ConsoleFile[]> {
-		const folder = vscode.Uri.joinPath(this.root, source.id);
+		const folder = vscode.Uri.joinPath(this.rootOf(source.id), source.id);
 		await vscode.workspace.fs.createDirectory(folder);
 		const open = new Set(vscode.workspace.textDocuments.map(d => d.uri.toString()));
 		const files: ConsoleFile[] = [];
@@ -292,7 +333,7 @@ export class Consoles implements vscode.Disposable {
 	}
 
 	private async create(source: DataSource, base: string): Promise<vscode.Uri> {
-		const uri = vscode.Uri.joinPath(this.root, source.id, fileName(base, source));
+		const uri = vscode.Uri.joinPath(this.rootOf(source.id), source.id, fileName(base, source));
 		await vscode.workspace.fs.writeFile(uri, new Uint8Array());
 		return uri;
 	}
@@ -326,7 +367,7 @@ export class Consoles implements vscode.Disposable {
 	}
 
 	private async reveal(source: DataSource): Promise<void> {
-		const folder = vscode.Uri.joinPath(this.root, source.id);
+		const folder = vscode.Uri.joinPath(this.rootOf(source.id), source.id);
 		await vscode.workspace.fs.createDirectory(folder);
 		await vscode.commands.executeCommand('revealFileInOS', folder.scheme === 'file' ? folder : vscode.Uri.file(folder.path));
 	}
@@ -785,7 +826,7 @@ export class Consoles implements vscode.Disposable {
 	}
 
 	private databaseOf(key: string, source: DataSource): string | undefined {
-		const stored = this.state.get<Record<string, string>>(CONSOLE_DATABASES, {})[key];
+		const stored = this.placeOf(source.id).state.get<Record<string, string>>(CONSOLE_DATABASES, {})[key];
 		if (stored) {
 			return stored;
 		}
@@ -801,12 +842,13 @@ export class Consoles implements vscode.Disposable {
 	}
 
 	private async useDatabase(source: DataSource, key: string, database: string): Promise<void> {
-		const all = { ...this.state.get<Record<string, string>>(CONSOLE_DATABASES, {}) };
+		const state = this.placeOf(source.id).state;
+		const all = { ...state.get<Record<string, string>>(CONSOLE_DATABASES, {}) };
 		if (all[key] === database) {
 			return;
 		}
 		all[key] = database;
-		await this.state.update(CONSOLE_DATABASES, all);
+		await state.update(CONSOLE_DATABASES, all);
 		const tx = this.transactions.get(key);
 		if (tx) {
 			tx.open = false;
@@ -860,16 +902,58 @@ export class Consoles implements vscode.Disposable {
 	}
 
 	private sourceOfUri(uri: vscode.Uri): DataSource | undefined {
-		const root = this.root;
-		const prefix = `${root.path}/`;
-		if (uri.scheme !== root.scheme || uri.authority !== root.authority || !uri.path.startsWith(prefix)) {
-			return undefined;
+		for (const place of this.places.all()) {
+			const root = vscode.Uri.joinPath(place.uri, 'consoles');
+			const prefix = `${root.path}/`;
+			if (uri.scheme === root.scheme && uri.authority === root.authority && uri.path.startsWith(prefix)) {
+				return this.sources.sql(decodeURIComponent(uri.path.slice(prefix.length).split('/')[0]));
+			}
 		}
-		return this.sources.sql(decodeURIComponent(uri.path.slice(prefix.length).split('/')[0]));
+		return undefined;
 	}
 
 	private session(document: vscode.TextDocument): string {
 		return `console:${document.uri.toString()}`;
+	}
+
+	async forgetSource(sourceId: string): Promise<boolean> {
+		if (!isSourceId(sourceId)) {
+			return false;
+		}
+		const place = this.placeOf(sourceId);
+		const folder = vscode.Uri.joinPath(place.uri, 'consoles', sourceId);
+		if (!await closeTabs(folder)) {
+			return false;
+		}
+		await takeDatabases(place.state, folder);
+		await vscode.workspace.fs.delete(folder, { recursive: true }).then(undefined, () => undefined);
+		return true;
+	}
+
+	async moveSource(sourceId: string, global: boolean): Promise<boolean> {
+		if (!isSourceId(sourceId)) {
+			return false;
+		}
+		const from = this.placeOf(sourceId);
+		const to = this.places.of(global);
+		if (from === to) {
+			return true;
+		}
+		const source = vscode.Uri.joinPath(from.uri, 'consoles', sourceId);
+		const target = vscode.Uri.joinPath(to.uri, 'consoles', sourceId);
+		if (!await closeTabs(source)) {
+			return false;
+		}
+		const moved = await takeDatabases(from.state, source);
+		if (moved.length) {
+			const prefix = `${source.toString()}/`;
+			await to.state.update(CONSOLE_DATABASES, {
+				...to.state.get<Record<string, string>>(CONSOLE_DATABASES, {}),
+				...Object.fromEntries(moved.map(([key, database]) => [`${target.toString()}/${key.slice(prefix.length)}`, database])),
+			});
+		}
+		await moveFolder(source, target);
+		return true;
 	}
 
 	uncommitted(sourceId: string): string[] {

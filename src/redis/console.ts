@@ -4,6 +4,7 @@ import type { ExecuteResult } from '../drivers/driver';
 import type { RedisArgument, RedisCommandDoc } from '../drivers/redis';
 import { summary } from '../shared/results-protocol';
 import type { RedisSource, Sources } from '../sources';
+import type { Places } from '../storage';
 import { isRedis } from '../sources';
 import { parseCommand, replyRows } from './values';
 
@@ -71,7 +72,7 @@ export class RedisConsoles implements vscode.Disposable {
 	private readonly disposables: vscode.Disposable[] = [];
 	private readonly adopting = new Set<string>();
 
-	constructor(private readonly storage: vscode.Uri, private readonly sources: Sources, private readonly results: ResultsView) {
+	constructor(private readonly places: Places, private readonly sources: Sources, private readonly results: ResultsView) {
 		this.status.tooltip = 'Columbus data source of this console';
 		this.dbStatus.command = 'columbus.redis.chooseDatabase';
 		this.dbStatus.tooltip = 'Database of this console: click to switch';
@@ -118,8 +119,9 @@ export class RedisConsoles implements vscode.Disposable {
 
 	async open(source: RedisSource, db?: number): Promise<void> {
 		const name = `console [${source.name.replace(/[\\/:*?"<>|]/g, '_')}]`;
-		const uri = vscode.Uri.joinPath(this.storage, 'consoles', source.id, name);
-		const legacy = vscode.Uri.joinPath(this.storage, 'consoles', source.id, `${name}.redis`);
+		const root = vscode.Uri.joinPath(this.places.of(source.global).uri, 'consoles');
+		const uri = vscode.Uri.joinPath(root, source.id, name);
+		const legacy = vscode.Uri.joinPath(root, source.id, `${name}.redis`);
 		const exists = async (target: vscode.Uri): Promise<boolean> => vscode.workspace.fs.stat(target).then(() => true, () => false);
 		if (!await exists(uri)) {
 			if (await exists(legacy) && !vscode.workspace.textDocuments.some(d => d.uri.toString() === legacy.toString())) {
@@ -244,13 +246,15 @@ export class RedisConsoles implements vscode.Disposable {
 	}
 
 	private sourceOf(document: vscode.TextDocument): RedisSource | undefined {
-		const root = vscode.Uri.joinPath(this.storage, 'consoles');
 		const uri = document.uri;
-		if (uri.scheme !== root.scheme || uri.authority !== root.authority || !uri.path.startsWith(`${root.path}/`)) {
-			return undefined;
+		for (const place of this.places.all()) {
+			const root = vscode.Uri.joinPath(place.uri, 'consoles');
+			if (uri.scheme === root.scheme && uri.authority === root.authority && uri.path.startsWith(`${root.path}/`)) {
+				const source = this.sources.get(decodeURIComponent(uri.path.slice(root.path.length + 1).split('/')[0]));
+				return source && isRedis(source) ? source : undefined;
+			}
 		}
-		const source = this.sources.get(decodeURIComponent(uri.path.slice(root.path.length + 1).split('/')[0]));
-		return source && isRedis(source) ? source : undefined;
+		return undefined;
 	}
 
 	private session(uri: vscode.Uri): string {

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join, resolve } from 'node:path';
@@ -12,7 +12,10 @@ const outDir = join(root, 'out-test', 'integration');
 execFileSync('node', ['esbuild.mjs'], { cwd: root, stdio: 'inherit' });
 rmSync(outDir, { recursive: true, force: true });
 await build({
-	entryPoints: { editor: join(root, 'src/test/integration/editor.test.ts') },
+	entryPoints: {
+		editor: join(root, 'src/test/integration/editor.test.ts'),
+		project: join(root, 'src/test/integration/project.test.ts'),
+	},
 	outdir: outDir,
 	outExtension: { '.js': '.test.js' },
 	bundle: true,
@@ -28,14 +31,24 @@ const exe = await downloadAndUnzipVSCode({
 });
 
 const profile = realpathSync(mkdtempSync(join(tmpdir(), 'cb-')));
+const project = join(profile, 'project');
+mkdirSync(join(project, '.columbus'), { recursive: true });
+writeFileSync(join(project, '.columbus', 'state.json'), JSON.stringify({
+	'columbus.dataSources': [
+		{ id: 'seeded', name: 'seeded', driver: 'redis', host: '127.0.0.1', port: 1, database: '0', user: '', ssl: 'disable' },
+		{ id: '../escape', name: 'escape', driver: 'redis', host: '127.0.0.1', port: 1, database: '0', user: '', ssl: 'disable' },
+	],
+}));
+const run = (name, userData, folder) => runTests({
+	vscodeExecutablePath: exe,
+	extensionDevelopmentPath: root,
+	extensionTestsPath: join(root, 'test', 'runner.cjs'),
+	extensionTestsEnv: { COLUMBUS_TEST_FILES: JSON.stringify([join(outDir, `${name}.test.js`)]), COLUMBUS_PG_URL: process.env.COLUMBUS_PG_URL ?? '', COLUMBUS_REDIS_URL: process.env.COLUMBUS_REDIS_URL ?? '' },
+	launchArgs: [...(folder ? [folder] : []), '--disable-extensions', '--user-data-dir', join(profile, userData), '--disable-workspace-trust'],
+});
 try {
-	await runTests({
-		vscodeExecutablePath: exe,
-		extensionDevelopmentPath: root,
-		extensionTestsPath: join(root, 'test', 'runner.cjs'),
-		extensionTestsEnv: { COLUMBUS_TEST_FILES: JSON.stringify([join(outDir, 'editor.test.js')]), COLUMBUS_PG_URL: process.env.COLUMBUS_PG_URL ?? '', COLUMBUS_REDIS_URL: process.env.COLUMBUS_REDIS_URL ?? '' },
-		launchArgs: ['--disable-extensions', '--user-data-dir', join(profile, 'ud'), '--disable-workspace-trust'],
-	});
+	await run('editor', 'ud');
+	await run('project', 'up', project);
 } finally {
 	rmSync(profile, { recursive: true, force: true });
 }

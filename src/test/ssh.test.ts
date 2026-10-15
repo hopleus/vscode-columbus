@@ -29,7 +29,7 @@ const listen = (server: { listen(port: number, host: string, done: () => void): 
 	new Promise(done => server.listen(0, '127.0.0.1', () => done((server.address() as AddressInfo).port)));
 
 before(async () => {
-	const key = utils.generateKeyPairSync('ed25519');
+	const key = keyPair();
 	ssh = new Server({ hostKeys: [key.private] }, client => {
 		sessions.add(client);
 		client.on('close', () => sessions.delete(client));
@@ -346,8 +346,17 @@ test('the worker opens forwards for every cluster node', { skip: (!clusterBehind
 	}
 });
 
+function keyPair(passphrase?: string): { private: string; public: string } {
+	for (;;) {
+		const pair = passphrase ? utils.generateKeyPairSync('ed25519', { passphrase, cipher: 'aes256-ctr', rounds: 16 }) : utils.generateKeyPairSync('ed25519');
+		if (!(utils.parseKey(pair.private, passphrase) instanceof Error)) {
+			return pair;
+		}
+	}
+}
+
 function userKey(name: string, passphrase?: string): string {
-	const pair = passphrase ? utils.generateKeyPairSync('ed25519', { passphrase, cipher: 'aes256-ctr', rounds: 16 }) : utils.generateKeyPairSync('ed25519');
+	const pair = keyPair(passphrase);
 	userKeys.push(utils.parseKey(pair.public) as ParsedKey);
 	const path = join(keys, name);
 	writeFileSync(path, pair.private);

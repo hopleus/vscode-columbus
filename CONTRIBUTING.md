@@ -57,8 +57,8 @@ TLS tests need `test/tls.sh`: PostgreSQL, MySQL and Redis with a certificate of 
 - `src/drivers/sqlite.ts` – SQLite driver on the built-in `node:sqlite` (Node.js 22.16 or newer), bundled into `out/drivers/sqlite.js`; its tests run without a server
 - `src/drivers/redis.ts` – Redis / Valkey / Dragonfly driver, bundled with `iovalkey` into `out/drivers/redis.js` and called through `RemoteRedis`; `src/redis` – keys in the grid and as text (`keys.ts`), value and command conversion (`values.ts`), the Redis console (`console.ts`) and tree actions (`actions.ts`)
 - `src/drivers/files.ts`, `src/drivers/install.ts`, `src/drivers/manage.ts` – driver files: `out/drivers` when running from source, otherwise verified files in global storage that are downloaded or installed only on request (Download in the form and the tree, Manage Drivers); `COLUMBUS_RELEASE_URL` points a development build at another release, e.g. a local `python3 -m http.server`
-- `src/store.ts` – saved data sources (global state) and passwords (secret storage)
-- `src/explorer/tree.ts` – Database Explorer tree
+- `src/store.ts` – saved data sources and passwords (secret storage); `src/storage.ts` – where data sources, schema filters and consoles live: project ones in `.columbus` of the first workspace folder (ignored in git by its own `.gitignore`) or in VS Code workspace storage with `columbus.storage: internal`, global ones in `state.json` of the global storage folder of the extension, where the `globalState` of 0.1.0 is imported once; `src/file-state.ts` keeps such a `state.json`, written atomically and read again when another window changes it
+- `src/explorer/tree.ts` – the Project and Global trees of Database Explorer
 - `src/editor/panel.ts` – data editor webview panel, talks to the driver
 - `src/console` – query consoles: files and execution (`consoles.ts`), completion (`assist.ts` heuristics, `smart.ts` on top of the grammar analysis from `assist-client.ts`), name resolution for highlighting, problems and `*` expansion (`semantics.ts`, wired into VS Code by `language.ts`), result paging (`paging.ts`), the results panel (`results.ts`)
 - `src/editor/export.ts` – export to a file, shared by tables and query results
@@ -66,7 +66,7 @@ TLS tests need `test/tls.sh`: PostgreSQL, MySQL and Redis with a certificate of 
 - `src/webview` – UI running inside webviews (separate tsconfig with DOM types): `data-view.ts` is the toolbar, grid and pager used by both the data editor (`main.ts`) and the results panel (`results.ts`), `form.ts` is the data source form built with [vscode-elements](https://vscode-elements.github.io)
 - `src/shared` – code used by both sides: message protocol, pending changes, formatting
 - `resources/icons` – tree icons for light and dark themes
-- `src/test` – unit tests, `src/test/integration` – tests running inside VS Code
+- `src/test` – unit tests, `src/test/integration` – tests running inside VS Code: `editor.test.ts` in a window without a folder, `project.test.ts` in a project with a `.columbus` folder
 
 ## Releasing
 

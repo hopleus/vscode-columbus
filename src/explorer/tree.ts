@@ -91,7 +91,7 @@ export class DatabaseTree implements vscode.TreeDataProvider<Node>, vscode.Dispo
 	private readonly redisKeys = new Map<string, Promise<{ keys: TreeKey[]; complete: boolean }>>();
 
 
-	constructor(private readonly sources: Sources, private readonly extensionUri: vscode.Uri, private readonly filter: SchemaFilter) {
+	constructor(private readonly sources: Sources, private readonly extensionUri: vscode.Uri, private readonly filter: SchemaFilter, private readonly global: boolean) {
 		this.subscriptions = [
 			sources.onDidChange(() => {
 				this.redisKeys.clear();
@@ -124,6 +124,9 @@ export class DatabaseTree implements vscode.TreeDataProvider<Node>, vscode.Dispo
 	}
 
 	private refreshSource(id: string): void {
+		if (this.sources.get(id)?.global !== this.global) {
+			return;
+		}
 		this._onDidChange.fire(this.roots.get(id));
 	}
 
@@ -199,7 +202,7 @@ export class DatabaseTree implements vscode.TreeDataProvider<Node>, vscode.Dispo
 
 	async getChildren(node?: Node): Promise<Node[]> {
 		if (!node) {
-			const roots = this.sources.list().map((source): Node => ({ kind: 'source', id: source.id, source }));
+			const roots = this.sources.list().filter(source => source.global === this.global).map((source): Node => ({ kind: 'source', id: source.id, source }));
 			this.roots.clear();
 			for (const root of roots) {
 				this.roots.set(root.id, root);

@@ -2,7 +2,7 @@
 	"name": "vscode-columbus",
 	"displayName": "Columbus",
 	"description": "A database client in the spirit of DataGrip: PostgreSQL, MySQL, MariaDB, SQLite, Redis, Valkey and Dragonfly with an editable data grid and SQL consoles that know your schema",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"publisher": "hopleus",
 	"icon": "resources/icon.png",
 	"galleryBanner": {
@@ -39,6 +39,7 @@
 	],
 	"main": "./out/extension.js",
 	"activationEvents": [
+		"workspaceContains:.columbus/state.json",
 		"onFileSystem:columbus-redis",
 		"onWebviewPanel:columbus.dataEditor",
 		"onWebviewPanel:columbus.redisKey",
@@ -80,8 +81,12 @@
 		"views": {
 			"columbus": [
 				{
-					"id": "columbus.explorer",
-					"name": "Database Explorer"
+					"id": "columbus.project",
+					"name": "Project"
+				},
+				{
+					"id": "columbus.global",
+					"name": "Global"
 				}
 			],
 			"columbus-results": [
@@ -94,8 +99,18 @@
 		},
 		"viewsWelcome": [
 			{
-				"view": "columbus.explorer",
-				"contents": "No data sources yet.\n[Add Data Source](command:columbus.addDataSource)"
+				"view": "columbus.project",
+				"contents": "Open a folder to keep data sources with the project.\n[Open Folder](command:vscode.openFolder)",
+				"when": "workspaceFolderCount == 0"
+			},
+			{
+				"view": "columbus.project",
+				"contents": "No data sources in this project yet.\n[Add Data Source](command:columbus.addProjectDataSource)",
+				"when": "workspaceFolderCount > 0"
+			},
+			{
+				"view": "columbus.global",
+				"contents": "Global data sources are shown in every window.\n[Add Global Data Source](command:columbus.addGlobalDataSource)"
 			}
 		],
 		"commands": [
@@ -104,6 +119,28 @@
 				"title": "Add Data Source",
 				"category": "Columbus",
 				"icon": "$(add)"
+			},
+			{
+				"command": "columbus.addProjectDataSource",
+				"title": "Add Data Source",
+				"category": "Columbus",
+				"icon": "$(add)"
+			},
+			{
+				"command": "columbus.addGlobalDataSource",
+				"title": "Add Global Data Source",
+				"category": "Columbus",
+				"icon": "$(add)"
+			},
+			{
+				"command": "columbus.makeGlobal",
+				"title": "Make Global",
+				"category": "Columbus"
+			},
+			{
+				"command": "columbus.makeProject",
+				"title": "Make Project",
+				"category": "Columbus"
 			},
 			{
 				"command": "columbus.editDataSource",
@@ -518,21 +555,50 @@
 				"icon": "$(extensions)"
 			}
 		],
+		"configuration": {
+			"title": "Columbus",
+			"properties": {
+				"columbus.storage": {
+					"type": "string",
+					"enum": [
+						"project",
+						"internal"
+					],
+					"enumDescriptions": [
+						"Keep data sources, schema filters and consoles in the .columbus folder of the project. The folder ignores itself in git.",
+						"Keep them in VS Code storage for the workspace; nothing is written to the project."
+					],
+					"default": "project",
+					"description": "Where Columbus stores data sources, schema filters and consoles. Takes effect after a window reload."
+				},
+				"columbus.hideProjectFolder": {
+					"type": "boolean",
+					"default": true,
+					"scope": "application",
+					"description": "Hide the .columbus folder from the Explorer by adding it to files.exclude in user settings."
+				}
+			}
+		},
 		"menus": {
 			"view/title": [
 				{
-					"command": "columbus.addDataSource",
-					"when": "view == columbus.explorer",
+					"command": "columbus.addProjectDataSource",
+					"when": "view == columbus.project && workspaceFolderCount > 0",
+					"group": "navigation@1"
+				},
+				{
+					"command": "columbus.addGlobalDataSource",
+					"when": "view == columbus.global",
 					"group": "navigation@1"
 				},
 				{
 					"command": "columbus.chooseConsole",
-					"when": "view == columbus.explorer",
+					"when": "view =~ /^columbus\\.(project|global)$/",
 					"group": "navigation@2"
 				},
 				{
 					"command": "columbus.refresh",
-					"when": "view == columbus.explorer",
+					"when": "view =~ /^columbus\\.(project|global)$/",
 					"group": "navigation@3"
 				},
 				{
@@ -542,153 +608,175 @@
 				},
 				{
 					"command": "columbus.manageDrivers",
-					"when": "view == columbus.explorer",
+					"when": "view =~ /^columbus\\.(project|global)$/",
 					"group": "more@1"
 				}
 			],
 			"view/item/context": [
 				{
 					"command": "columbus.editData",
-					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(table|view|materializedView)$/",
 					"group": "0_data@1"
 				},
 				{
 					"submenu": "columbus.tree.new",
-					"when": "view == columbus.explorer && viewItem =~ /^(source|schema|table)/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(source|schema|table)/",
 					"group": "0_data@2"
 				},
 				{
 					"command": "columbus.openConsole",
-					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource|database$)/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(source|redisSource|database$)/",
 					"group": "0_data@3"
 				},
 				{
 					"command": "columbus.tree.refresh",
-					"when": "view == columbus.explorer && viewItem =~ /^(source|database|schema|table|view|materializedView|redisSource|redisDb|redisFolder)/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(source|database|schema|table|view|materializedView|redisSource|redisDb|redisFolder)/",
 					"group": "1_refresh@1"
 				},
 				{
 					"command": "columbus.tree.disconnect",
-					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource).*\\.connected(\\.|$)/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(source|redisSource).*\\.connected(\\.|$)/",
 					"group": "1_refresh@2"
 				},
 				{
 					"command": "columbus.tree.copyName",
-					"when": "view == columbus.explorer && viewItem =~ /^(database|schema|table|view|materializedView|column|primaryKey|key|foreignKey|index|routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(database|schema|table|view|materializedView|column|primaryKey|key|foreignKey|index|routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
 					"group": "2_copy@1"
 				},
 				{
 					"command": "columbus.tree.copyQualifiedName",
-					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView|column|routine|sequence|objectType)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(table|view|materializedView|column|routine|sequence|objectType)$/",
 					"group": "2_copy@2"
 				},
 				{
 					"submenu": "columbus.tree.scripts",
-					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(table|view|materializedView)$/",
 					"group": "3_scripts@1"
 				},
 				{
 					"command": "columbus.tree.schemaDdl",
-					"when": "view == columbus.explorer && viewItem == schema",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == schema",
 					"group": "3_scripts@2"
 				},
 				{
 					"command": "columbus.tree.objectDdl",
-					"when": "view == columbus.explorer && viewItem =~ /^(routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
 					"group": "3_scripts@1"
 				},
 				{
 					"command": "columbus.tree.export",
-					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(table|view|materializedView)$/",
 					"group": "3_scripts@3"
 				},
 				{
 					"command": "columbus.tree.chooseDatabases",
-					"when": "view == columbus.explorer && viewItem =~ /^source.*\\.databases/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^source.*\\.databases/",
 					"group": "4_properties@0"
 				},
 				{
 					"command": "columbus.tree.chooseSchemas",
-					"when": "view == columbus.explorer && viewItem =~ /^source/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^source/",
 					"group": "4_properties@0"
 				},
 				{
 					"command": "columbus.editDataSource",
-					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource)\\.removable/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(source|redisSource)\\.removable/",
 					"group": "4_properties@1"
 				},
 				{
+					"command": "columbus.makeGlobal",
+					"when": "view == columbus.project && viewItem =~ /^(source|redisSource)\\.removable/",
+					"group": "4_properties@2"
+				},
+				{
+					"command": "columbus.makeProject",
+					"when": "view == columbus.global && workspaceFolderCount > 0 && viewItem =~ /^(source|redisSource)\\.removable/",
+					"group": "4_properties@2"
+				},
+				{
 					"command": "columbus.tree.rename",
-					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView|column)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(table|view|materializedView|column)$/",
 					"group": "5_modify@1"
 				},
 				{
 					"command": "columbus.tree.truncate",
-					"when": "view == columbus.explorer && viewItem == table",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == table",
 					"group": "5_modify@2"
 				},
 				{
 					"command": "columbus.tree.refreshMaterializedView",
-					"when": "view == columbus.explorer && viewItem == materializedView",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == materializedView",
 					"group": "5_modify@3"
 				},
 				{
 					"command": "columbus.tree.drop",
-					"when": "view == columbus.explorer && viewItem =~ /^(table|view|materializedView|column|primaryKey|key|foreignKey|index|routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(table|view|materializedView|column|primaryKey|key|foreignKey|index|routine|sequence|objectType|trigger|check|extension|role|tablespace)$/",
 					"group": "9_drop@1"
 				},
 				{
 					"command": "columbus.removeDataSource",
-					"when": "view == columbus.explorer && viewItem =~ /^(source|redisSource)\\.removable/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(source|redisSource)\\.removable/",
 					"group": "9_drop@2"
 				},
 				{
 					"command": "columbus.redis.openConsole",
-					"when": "view == columbus.explorer && viewItem == redisDb",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisDb",
 					"group": "0_data@1"
 				},
 				{
 					"command": "columbus.redis.newKey",
-					"when": "view == columbus.explorer && viewItem =~ /^(redisDb|redisFolder)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(redisDb|redisFolder)$/",
 					"group": "0_data@2"
 				},
 				{
 					"command": "columbus.redis.filterKeys",
-					"when": "view == columbus.explorer && viewItem == redisDb",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisDb",
 					"group": "0_data@3"
 				},
 				{
 					"command": "columbus.redis.openKey",
-					"when": "view == columbus.explorer && viewItem == redisKey",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisKey",
 					"group": "0_data@1"
 				},
 				{
 					"command": "columbus.redis.copyKey",
-					"when": "view == columbus.explorer && viewItem == redisKey",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisKey",
 					"group": "2_copy@1"
 				},
 				{
 					"command": "columbus.redis.renameKey",
-					"when": "view == columbus.explorer && viewItem == redisKey",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisKey",
 					"group": "3_modify@1"
 				},
 				{
 					"command": "columbus.redis.expireKey",
-					"when": "view == columbus.explorer && viewItem == redisKey",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisKey",
 					"group": "3_modify@2"
 				},
 				{
 					"command": "columbus.redis.deleteKey",
-					"when": "view == columbus.explorer && viewItem =~ /^(redisKey|redisFolder)$/",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem =~ /^(redisKey|redisFolder)$/",
 					"group": "9_drop@1"
 				},
 				{
 					"command": "columbus.redis.openAsText",
-					"when": "view == columbus.explorer && viewItem == redisKey",
+					"when": "view =~ /^columbus\\.(project|global)$/ && viewItem == redisKey",
 					"group": "0_data@2"
 				}
 			],
 			"commandPalette": [
+				{
+					"command": "columbus.addProjectDataSource",
+					"when": "false"
+				},
+				{
+					"command": "columbus.makeGlobal",
+					"when": "false"
+				},
+				{
+					"command": "columbus.makeProject",
+					"when": "false"
+				},
 				{
 					"command": "columbus.editDataSource",
 					"when": "false"
@@ -1230,24 +1318,24 @@
 				"command": "columbus.editData",
 				"key": "ctrl+down",
 				"mac": "cmd+down",
-				"when": "focusedView == columbus.explorer"
+				"when": "focusedView =~ /^columbus\\.(project|global)$/"
 			},
 			{
 				"command": "columbus.tree.rename",
 				"key": "f2",
-				"when": "focusedView == columbus.explorer"
+				"when": "focusedView =~ /^columbus\\.(project|global)$/"
 			},
 			{
 				"command": "columbus.tree.drop",
 				"key": "ctrl+backspace",
 				"mac": "cmd+backspace",
-				"when": "focusedView == columbus.explorer"
+				"when": "focusedView =~ /^columbus\\.(project|global)$/"
 			},
 			{
 				"command": "columbus.openConsole",
 				"key": "ctrl+shift+l",
 				"mac": "shift+cmd+l",
-				"when": "focusedView == columbus.explorer"
+				"when": "focusedView =~ /^columbus\\.(project|global)$/"
 			}
 		],
 		"submenus": [

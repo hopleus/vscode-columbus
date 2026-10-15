@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- Project and Global sections in the Columbus side bar, like project and global data sources in DataGrip. Project data sources, their filters and consoles are kept in a `.columbus` folder of the project that ignores itself in git and moves with it (`columbus.storage` switches to VS Code storage, `columbus.hideProjectFolder` hides the folder from the Explorer). Global data sources are shown in every window; data sources of 0.1.0 are global. Make Global, Make Project and drag and drop move a data source between the sections with its filters and consoles.
+- Remove Data Source also drops the schema, database and key filters of the data source and deletes its query consoles.
+- A statement cut off by a dropped SSH tunnel reports the closed tunnel instead of `read ECONNRESET`.
+
 ## 0.1.0
 
 - Database Explorer: routines, sequences, object types and foreign tables in schemas, checks and triggers in tables, extensions under Database Objects, roles and tablespaces under Server Objects; a click opens the DDL of an object in a preview tab.

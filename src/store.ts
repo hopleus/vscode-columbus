@@ -5,6 +5,11 @@ import type { Secrets } from './shared/form-protocol';
 export type StoredSource = Omit<ConnectionConfig, 'password' | 'ssh' | 'servername' | 'sslPassphrase'> & { id: string; name: string; product?: Product; ssh?: Omit<SshConfig, 'password'> };
 
 const KEY = 'columbus.dataSources';
+const SOURCE_ID = /^[A-Za-z0-9_-]+$/;
+
+export function isSourceId(id: unknown): id is string {
+	return typeof id === 'string' && SOURCE_ID.test(id);
+}
 
 export function sslFiles(source: Pick<ConnectionConfig, 'ssl' | 'sslCa' | 'sslCert' | 'sslKey'>): Pick<ConnectionConfig, 'sslCa' | 'sslCert' | 'sslKey'> {
 	if (source.ssl === 'disable') {
@@ -33,7 +38,8 @@ export class SourceStore {
 	constructor(private readonly state: vscode.Memento, private readonly secrets: vscode.SecretStorage) { }
 
 	list(): StoredSource[] {
-		return this.state.get<StoredSource[]>(KEY, []);
+		const stored = this.state.get<unknown>(KEY, []);
+		return Array.isArray(stored) ? (stored as StoredSource[]).filter(s => isSourceId(s?.id)) : [];
 	}
 
 	get(id: string): StoredSource | undefined {
@@ -48,6 +54,14 @@ export class SourceStore {
 	async update(source: StoredSource, secrets: Secrets): Promise<void> {
 		await this.storeSecrets(source, secrets);
 		await this.state.update(KEY, this.list().map(s => s.id === source.id ? source : s));
+	}
+
+	async put(source: StoredSource): Promise<void> {
+		await this.state.update(KEY, [...this.list().filter(s => s.id !== source.id), source]);
+	}
+
+	async detach(id: string): Promise<void> {
+		await this.state.update(KEY, this.list().filter(s => s.id !== id));
 	}
 
 	private async storeSecrets(source: StoredSource, secrets: Secrets): Promise<void> {
@@ -86,7 +100,7 @@ export class SourceStore {
 	}
 
 	async remove(id: string): Promise<void> {
-		await this.state.update(KEY, this.list().filter(s => s.id !== id));
+		await this.detach(id);
 		await this.secrets.delete(secretKey(id));
 		await this.secrets.delete(sshKey(id));
 		await this.secrets.delete(sslKeyKey(id));

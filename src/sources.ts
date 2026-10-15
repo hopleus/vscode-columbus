@@ -8,6 +8,7 @@ interface SourceBase {
 	id: string;
 	name: string;
 	removable: boolean;
+	global: boolean;
 	product?: Product;
 	remember?(product: Product): void;
 }
@@ -86,6 +87,14 @@ export class Sources implements vscode.Disposable {
 		this.items[index] = source;
 		this.catalogs.delete(source.id);
 		this._onDidChange.fire();
+	}
+
+	setGlobal(id: string, global: boolean): void {
+		const source = this.get(id);
+		if (source && source.global !== global) {
+			source.global = global;
+			this._onDidChange.fire();
+		}
 	}
 
 	remove(id: string): void {

@@ -14,10 +14,10 @@ const SSL_FILE_TITLES: Record<SslFileField, string> = { sslCa: 'CA File', sslCer
 
 export interface SourceFormContext {
 	extensionUri: vscode.Uri;
-	store: SourceStore;
+	store(global: boolean): SourceStore;
 	files: DriverFiles;
 	workerPath: string;
-	saved(source: StoredSource, created: boolean): void;
+	saved(source: StoredSource, created: boolean, global: boolean): void;
 }
 
 export function databaseFile(path: string): string {
@@ -74,14 +74,18 @@ function validate(fields: SourceFields): string | undefined {
 export class SourceForm {
 	private static readonly open = new Map<string, SourceForm>();
 
-	static show(context: SourceFormContext, existing?: StoredSource): void {
-		const key = existing?.id ?? '';
+	static show(context: SourceFormContext, global: boolean, existing?: StoredSource): void {
+		const key = existing?.id ?? (global ? ':global' : ':project');
 		const form = SourceForm.open.get(key);
 		if (form) {
 			form.panel.reveal();
 			return;
 		}
-		SourceForm.open.set(key, new SourceForm(context, existing, () => SourceForm.open.delete(key)));
+		SourceForm.open.set(key, new SourceForm(context, global, existing, () => SourceForm.open.delete(key)));
+	}
+
+	static close(id: string): void {
+		SourceForm.open.get(id)?.panel.dispose();
 	}
 
 	private readonly panel: vscode.WebviewPanel;
@@ -90,11 +94,14 @@ export class SourceForm {
 	private stopped = false;
 	private readonly trusted = new Map<string, string>();
 
-	private constructor(private readonly context: SourceFormContext, private readonly existing: StoredSource | undefined, onDispose: () => void) {
+	private readonly store: SourceStore;
+
+	private constructor(private readonly context: SourceFormContext, private readonly global: boolean, private readonly existing: StoredSource | undefined, onDispose: () => void) {
+		this.store = context.store(global);
 		const out = vscode.Uri.joinPath(context.extensionUri, 'out');
 		this.panel = vscode.window.createWebviewPanel(
 			'columbus.dataSource',
-			existing ? `${existing.name} – Data Source` : 'New Data Source',
+			existing ? `${existing.name} – Data Source` : global ? 'New Global Data Source' : 'New Data Source',
 			vscode.ViewColumn.Active,
 			{ enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [out] }
 		);
@@ -123,9 +130,9 @@ export class SourceForm {
 	private async receive(message: FormViewMessage): Promise<void> {
 		switch (message.type) {
 			case 'ready': {
-				const hasPassword = !!this.existing && !!await this.context.store.password(this.existing.id);
-				const hasSshPassword = !!this.existing && !!await this.context.store.sshPassword(this.existing.id);
-				const hasSslPassphrase = !!this.existing && !!await this.context.store.sslPassphrase(this.existing.id);
+				const hasPassword = !!this.existing && !!await this.store.password(this.existing.id);
+				const hasSshPassword = !!this.existing && !!await this.store.sshPassword(this.existing.id);
+				const hasSslPassphrase = !!this.existing && !!await this.store.sslPassphrase(this.existing.id);
 				if (this.existing?.ssh?.fingerprint) {
 					this.trusted.set(`${this.existing.ssh.host}:${this.existing.ssh.port}`, this.existing.ssh.fingerprint);
 				}
@@ -284,11 +291,11 @@ export class SourceForm {
 			...(fields.ssh ? { ssh: this.ssh(fields) } : {}),
 		};
 		if (this.existing) {
-			await this.context.store.update(source, secrets);
+			await this.store.update(source, secrets);
 		} else {
-			await this.context.store.add(source, secrets);
+			await this.store.add(source, secrets);
 		}
-		this.context.saved(source, !this.existing);
+		this.context.saved(source, !this.existing, this.global);
 		this.panel.dispose();
 	}
 
@@ -306,7 +313,7 @@ export class SourceForm {
 	}
 
 	private async config(fields: SourceFields, secrets: Secrets): Promise<ConnectionConfig> {
-		const store = this.context.store;
+		const store = this.store;
 		const id = this.existing?.id;
 		const password = secrets.password ?? (id ? await store.password(id) : undefined) ?? '';
 		const sshPassword = secrets.sshPassword ?? (id ? await store.sshPassword(id) : undefined) ?? '';

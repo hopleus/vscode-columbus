@@ -58,7 +58,7 @@ export class TreeActions {
 	constructor(
 		private readonly sources: Sources,
 		private readonly consoles: Consoles,
-		private readonly view: vscode.TreeView<Node>,
+		private readonly selected: () => Node | undefined,
 		private readonly filter: SchemaFilter,
 		private readonly definitions: Definitions
 	) { }
@@ -66,7 +66,7 @@ export class TreeActions {
 	register(): vscode.Disposable[] {
 		const command = (id: string, run: (node: Node) => unknown): vscode.Disposable =>
 			vscode.commands.registerCommand(id, async (node?: Node) => {
-				const target = node ?? this.view.selection[0];
+				const target = node ?? this.selected();
 				if (target) {
 					try {
 						await run(target);
